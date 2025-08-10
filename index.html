@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RELY Receipt</title>
+    <style>
+        /* Print-specific styles for thermal printers */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.2;
+                width: 58mm; /* Standard thermal printer width */
+                background: white;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .receipt {
+                width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+            
+            @page {
+                margin: 0;
+                size: 58mm auto;
+            }
+        }
+        
+        /* Screen styles */
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 300px;
+        }
+        
+        .receipt {
+            width: 100%;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 1px dashed #333;
+            padding-bottom: 10px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4500;
+            margin-bottom: 5px;
+        }
+        
+        .contact {
+            font-size: 11px;
+            margin: 2px 0;
+        }
+        
+        .order-info {
+            margin: 15px 0;
+            border-bottom: 1px dashed #333;
+            padding-bottom: 10px;
+        }
+        
+        .location {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 11px;
+        }
+        
+        .order-header {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .order-item {
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .item-name {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .item-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+        }
+        
+        .quantity {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+        
+        .price {
+            font-weight: bold;
+        }
+        
+        .total-section {
+            margin-top: 15px;
+            border-top: 2px solid #333;
+            padding-top: 10px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .total-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ff4500;
+            border-top: 1px solid #333;
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+        
+        .status {
+            background: #4CAF50;
+            color: white;
+            padding: 8px;
+            text-align: center;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .print-btn {
+            background: #ff4500;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .print-btn:hover {
+            background: #e63e00;
+        }
+        
+        .auto-print-info {
+            text-align: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f5e8;
+            border: 1px solid #4CAF50;
+            border-radius: 5px;
+            font-size: 11px;
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="receipt">
+            <!-- Header -->
+            <div class="header">
+                <div class="logo">RELY</div>
+                <div class="contact">📧 info@rely.co.ke</div>
+                <div class="contact">💬 WhatsApp</div>
+                <div class="contact">📞 +254 700 55 00 55</div>
+            </div>
+            
+            <!-- Location and Order Info -->
+            <div class="order-info">
+                <div class="location">
+                    📍 Lodwar
+                    <span style="margin-left: auto; font-size: 10px;">KES</span>
+                </div>
+                <div class="order-header">Orders</div>
+            </div>
+            
+            <!-- Order Item -->
+            <div class="order-item">
+                <div class="item-name">🏕️ Cradle Tented Camp, Lodwar</div>
+                <div style="font-size: 10px; color: #666; margin-bottom: 5px;">Order</div>
+                <div class="item-details">
+                    <div>
+                        <span style="color: #666;">Regular</span>
+                        <br>
+                        <span class="quantity">x4</span>
+                        <span style="margin-left: 10px;">✅</span>
+                    </div>
+                    <div class="price">KES1,000.00</div>
+                </div>
+            </div>
+            
+            <!-- Divider -->
+            <div class="divider">================================</div>
+            
+            <!-- Total Section -->
+            <div class="total-section">
+                <div class="total-row">
+                    <span>Sub-total:</span>
+                    <span>KES3,560.00</span>
+                </div>
+                <div class="total-row">
+                    <span>Taxes:</span>
+                    <span>KES440.00</span>
+                </div>
+                <div class="total-row total-price">
+                    <span>Total Price:</span>
+                    <span>KSh4,000.00</span>
+                </div>
+            </div>
+            
+            <!-- Status -->
+            <div class="status">✅ Paid</div>
+            
+            <div class="divider" style="margin-top: 15px;">================================</div>
+            
+            <div style="text-align: center; margin-top: 10px; font-size: 10px;">
+                Thank you for using RELY!<br>
+                <span id="timestamp"></span>
+            </div>
+        </div>
+        
+        <div class="no-print">
+            <div class="auto-print-info">
+                ✅ Auto-print enabled for thermal printers
+            </div>
+            <button class="print-btn" onclick="printReceiptAlt()">🖨️ Print Receipt</button>
+        </div>
+    </div>
+
+    <script>
+        // Set current timestamp
+        document.getElementById('timestamp').textContent = new Date().toLocaleString('en-KE', {
+            timeZone: 'Africa/Nairobi',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+
+        // Alternative printing method for better compatibility
+        function printReceiptAlt() {
+            // Create a clean print version
+            const printContent = `
+                <html>
+                <head>
+                    <title>RELY Receipt</title>
+                    <style>
+                        body {
+                            font-family: 'Courier New', monospace;
+                            font-size: 12px;
+                            line-height: 1.2;
+                            margin: 0;
+                            padding: 10px;
+                            width: 300px;
+                        }
+                        .header { text-align: center; border-bottom: 1px dashed #333; padding-bottom: 10px; }
+                        .logo { font-size: 20px; font-weight: bold; }
+                        .total-price { font-weight: bold; font-size: 16px; }
+                        .status { background: #000; color: white; padding: 5px; text-align: center; }
+                        @media print { @page { margin: 0; size: auto; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="logo">RELY</div>
+                        <div>info@rely.co.ke</div>
+                        <div>WhatsApp</div>
+                        <div>+254 700 55 00 55</div>
+                    </div>
+                    <br>
+                    <div>Lodwar - KES</div>
+                    <div><strong>Orders</strong></div>
+                    <br>
+                    <div><strong>Cradle Tented Camp, Lodwar</strong></div>
+                    <div>Order</div>
+                    <div>Regular x4 ✓ - KES1,000.00</div>
+                    <div>================================</div>
+                    <div>Sub-total: KES3,560.00</div>
+                    <div>Taxes: KES440.00</div>
+                    <div class="total-price">Total Price: KSh4,000.00</div>
+                    <div class="status">✓ Paid</div>
+                    <div>================================</div>
+                    <div style="text-align: center;">Thank you for using RELY!</div>
+                    <div style="text-align: center;">${new Date().toLocaleString()}</div>
+                </body>
+                </html>
+            `;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+
+        // Auto-print when page loads (for direct thermal printer access)
+        window.addEventListener('load', function() {
+            // Check if this is a direct print request (you can add URL parameters)
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoPrint = urlParams.get('autoprint');
+            
+            if (autoPrint === 'true') {
+                setTimeout(printReceipt, 1000); // Delay to ensure page is fully loaded
+            }
+        });
+
+        // Simple print function optimized for thermal printers
+        function printReceipt() {
+            try {
+                // Use the browser's built-in print function
+                window.print();
+            } catch (error) {
+                console.error('Print error:', error);
+                alert('Print failed. Please try manually printing the page.');
+            }
+        }
+    </script>
+</body>
+</html>
