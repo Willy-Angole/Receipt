@@ -317,128 +317,262 @@
         // Initialize receipt data
         generateTransactionData();
 
-        // Print function optimized for thermal printers
+        // Print function optimized for POS thermal printers
         function printReceipt() {
             try {
-                updatePrinterStatus('🖨️ Printing receipt...', 'info');
+                updatePrinterStatus('🖨️ Sending to thermal printer...', 'info');
                 
                 // Generate new transaction data for each print
                 generateTransactionData();
                 
-                // Create print-optimized window
-                const printWindow = window.open('', '_blank', 'width=300,height=600');
-                const receiptContent = document.getElementById('receipt-content').outerHTML;
+                // Method 1: Try direct thermal printer communication
+                if (tryDirectThermalPrint()) {
+                    return;
+                }
                 
-                const printHTML = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Transaction Receipt</title>
-                        <style>
-                            body {
-                                font-family: 'Courier New', monospace;
-                                font-size: 9px;
-                                line-height: 1.1;
-                                margin: 0;
-                                padding: 5px;
-                                width: 58mm;
-                                background: white;
-                                color: black;
-                            }
-                            .receipt {
-                                width: 100%;
-                                font-size: 9px;
-                                line-height: 1.2;
-                            }
-                            .header {
-                                text-align: center;
-                                margin-bottom: 10px;
-                                padding-bottom: 5px;
-                            }
-                            .logo {
-                                font-size: 14px;
-                                font-weight: bold;
-                                margin-bottom: 3px;
-                            }
-                            .merchant-info {
-                                font-size: 8px;
-                                margin: 1px 0;
-                            }
-                            .transaction-details {
-                                margin: 8px 0;
-                                font-size: 8px;
-                            }
-                            .detail-row {
-                                display: flex;
-                                justify-content: space-between;
-                                margin: 1px 0;
-                                align-items: flex-start;
-                            }
-                            .detail-label {
-                                flex: 0 0 40%;
-                                text-align: left;
-                            }
-                            .detail-value {
-                                flex: 1;
-                                text-align: right;
-                                word-break: break-all;
-                            }
-                            .divider {
-                                border-top: 1px dashed #333;
-                                margin: 5px 0;
-                            }
-                            .amount-section {
-                                text-align: center;
-                                margin: 10px 0;
-                                font-weight: bold;
-                                font-size: 10px;
-                            }
-                            .status {
-                                text-align: center;
-                                margin: 8px 0;
-                                font-weight: bold;
-                            }
-                            .signature-section {
-                                margin: 10px 0;
-                                text-align: center;
-                                font-size: 7px;
-                            }
-                            .footer {
-                                text-align: center;
-                                margin-top: 10px;
-                                font-size: 7px;
-                            }
-                            @media print {
-                                body { width: 58mm !important; }
-                                @page { margin: 0; size: 58mm auto; }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        ${receiptContent}
-                    </body>
-                    </html>
-                `;
-                
-                printWindow.document.write(printHTML);
-                printWindow.document.close();
-                
-                // Wait for content to load then print
-                setTimeout(() => {
-                    printWindow.focus();
-                    printWindow.print();
-                    
-                    // Close print window after printing
-                    setTimeout(() => {
-                        printWindow.close();
-                        updatePrinterStatus('✅ Receipt printed successfully', 'success');
-                    }, 1000);
-                }, 500);
+                // Method 2: Optimized browser print with thermal printer settings
+                printWithThermalSettings();
                 
             } catch (error) {
                 console.error('Print error:', error);
                 updatePrinterStatus('❌ Print failed: ' + error.message, 'error');
             }
+        }
+
+        // Try direct thermal printer communication
+        function tryDirectThermalPrint() {
+            try {
+                // Check if running in POS environment with direct printer access
+                if (window.pos && window.pos.printer) {
+                    const receiptData = generateThermalPrintData();
+                    window.pos.printer.print(receiptData);
+                    updatePrinterStatus('✅ Printed to thermal printer', 'success');
+                    return true;
+                }
+                
+                // Check for ESC/POS printer interface
+                if (window.escpos || window.thermalPrinter) {
+                    printESCPOSDirect();
+                    return true;
+                }
+                
+                return false;
+            } catch (error) {
+                console.log('Direct thermal print not available:', error);
+                return false;
+            }
+        }
+
+        // ESC/POS direct printing
+        function printESCPOSDirect() {
+            const commands = generateESCPOSCommands();
+            
+            if (window.escpos) {
+                window.escpos.print(commands);
+                updatePrinterStatus('✅ Sent ESC/POS commands', 'success');
+            } else if (window.thermalPrinter) {
+                window.thermalPrinter.printRaw(commands);
+                updatePrinterStatus('✅ Printed via thermal printer API', 'success');
+            }
+        }
+
+        // Generate thermal print data
+        function generateThermalPrintData() {
+            const now = new Date();
+            return {
+                header: [
+                    { text: 'RELY PAYMENTS', align: 'center', bold: true, size: 'large' },
+                    { text: 'Merchant Services', align: 'center' },
+                    { text: 'Nairobi, Kenya', align: 'center' },
+                    { text: '+254 700 55 00 55', align: 'center' },
+                    { text: '--------------------------------', align: 'center' }
+                ],
+                body: [
+                    { text: 'CONSUMPTION', align: 'center', bold: true },
+                    { text: '', align: 'left' },
+                    { text: `TID: ${document.getElementById('tid').textContent}`, align: 'left' },
+                    { text: `MID: ${document.getElementById('mid').textContent}`, align: 'left' },
+                    { text: `Batch: ${document.getElementById('batch').textContent}`, align: 'left' },
+                    { text: `Auth: ${document.getElementById('auth-code').textContent}`, align: 'left' },
+                    { text: `Ref: ${document.getElementById('ref-number').textContent}`, align: 'left' },
+                    { text: `DateTime: ${document.getElementById('datetime').textContent}`, align: 'left' },
+                    { text: `Amount: ${document.getElementById('amount').textContent}`, align: 'left' },
+                    { text: '--------------------------------', align: 'center' },
+                    { text: 'TOTAL', align: 'center', bold: true },
+                    { text: 'KES 4,000.00', align: 'center', bold: true, size: 'large' },
+                    { text: '--------------------------------', align: 'center' },
+                    { text: 'APPROVED', align: 'center', bold: true },
+                    { text: '--------------------------------', align: 'center' }
+                ],
+                footer: [
+                    { text: 'Cardholder signature:', align: 'center' },
+                    { text: '', align: 'left' },
+                    { text: '', align: 'left' },
+                    { text: 'I confirm the above transaction', align: 'left', size: 'small' },
+                    { text: 'and agree to credit it to this', align: 'left', size: 'small' },
+                    { text: 'card account', align: 'left', size: 'small' },
+                    { text: '', align: 'left' },
+                    { text: 'Thank you for using RELY!', align: 'center' },
+                    { text: now.toLocaleString(), align: 'center' },
+                    { text: 'MERCHANT COPY', align: 'center', bold: true },
+                    { text: '', align: 'left' },
+                    { text: '', align: 'left' },
+                    { text: '', align: 'left' }
+                ],
+                cut: true
+            };
+        }
+
+        // Enhanced browser print with thermal printer settings
+        function printWithThermalSettings() {
+            // Create a hidden iframe for thermal printing
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            
+            const receiptContent = document.getElementById('receipt-content').outerHTML;
+            
+            const thermalPrintHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Thermal Receipt Print</title>
+                    <style>
+                        @media print {
+                            * { 
+                                margin: 0 !important; 
+                                padding: 0 !important; 
+                                box-sizing: border-box !important;
+                            }
+                            
+                            html, body {
+                                width: 58mm !important;
+                                height: auto !important;
+                                font-family: 'Courier New', monospace !important;
+                                font-size: 8px !important;
+                                line-height: 1.1 !important;
+                                background: white !important;
+                                -webkit-print-color-adjust: exact !important;
+                                color-adjust: exact !important;
+                            }
+                            
+                            @page {
+                                size: 58mm auto !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                            }
+                            
+                            .receipt {
+                                width: 100% !important;
+                                padding: 2mm !important;
+                                font-size: 8px !important;
+                                line-height: 1.1 !important;
+                            }
+                            
+                            .logo { font-size: 12px !important; }
+                            .amount-section { font-size: 10px !important; }
+                        }
+                        
+                        body {
+                            font-family: 'Courier New', monospace;
+                            font-size: 8px;
+                            line-height: 1.1;
+                            margin: 0;
+                            padding: 2mm;
+                            width: 58mm;
+                        }
+                        
+                        ${document.querySelector('style').innerHTML}
+                    </style>
+                </head>
+                <body onload="window.print(); setTimeout(() => parent.document.body.removeChild(parent.document.querySelector('iframe')), 1000);">
+                    ${receiptContent}
+                </body>
+                </html>
+            `;
+            
+            iframe.contentDocument.open();
+            iframe.contentDocument.write(thermalPrintHTML);
+            iframe.contentDocument.close();
+            
+            updatePrinterStatus('✅ Sending to printer...', 'success');
+        }
+
+        // Generate ESC/POS commands for direct thermal printing
+        function generateESCPOSCommands() {
+            const ESC = '\x1B';
+            const GS = '\x1D';
+            const LF = '\x0A';
+            
+            let commands = '';
+            
+            // Initialize printer
+            commands += ESC + '@';
+            
+            // Header
+            commands += ESC + 'a' + '\x01'; // Center align
+            commands += GS + '!' + '\x11';   // Double size
+            commands += 'RELY PAYMENTS' + LF;
+            commands += GS + '!' + '\x00';   // Normal size
+            commands += 'Merchant Services' + LF;
+            commands += 'Nairobi, Kenya' + LF;
+            commands += '+254 700 55 00 55' + LF;
+            commands += '--------------------------------' + LF;
+            
+            // Transaction type
+            commands += ESC + 'E' + '\x01';  // Bold on
+            commands += 'CONSUMPTION' + LF;
+            commands += ESC + 'E' + '\x00';  // Bold off
+            commands += LF;
+            
+            // Transaction details
+            commands += ESC + 'a' + '\x00';  // Left align
+            commands += `TID: ${document.getElementById('tid').textContent}` + LF;
+            commands += `MID: ${document.getElementById('mid').textContent}` + LF;
+            commands += `Batch: ${document.getElementById('batch').textContent}` + LF;
+            commands += `Auth: ${document.getElementById('auth-code').textContent}` + LF;
+            commands += `Ref: ${document.getElementById('ref-number').textContent}` + LF;
+            commands += `DateTime: ${document.getElementById('datetime').textContent}` + LF;
+            commands += `Amount: ${document.getElementById('amount').textContent}` + LF;
+            commands += '--------------------------------' + LF;
+            
+            // Total
+            commands += ESC + 'a' + '\x01';  // Center align
+            commands += ESC + 'E' + '\x01';  // Bold on
+            commands += 'TOTAL' + LF;
+            commands += GS + '!' + '\x11';   // Double size
+            commands += 'KES 4,000.00' + LF;
+            commands += GS + '!' + '\x00';   // Normal size
+            commands += ESC + 'E' + '\x00';  // Bold off
+            commands += '--------------------------------' + LF;
+            
+            // Status
+            commands += ESC + 'E' + '\x01';  // Bold on
+            commands += 'APPROVED' + LF;
+            commands += ESC + 'E' + '\x00';  // Bold off
+            commands += '--------------------------------' + LF;
+            
+            // Signature section
+            commands += 'Cardholder signature:' + LF;
+            commands += LF + LF + LF;
+            commands += ESC + 'a' + '\x00';  // Left align
+            commands += 'I confirm the above transaction' + LF;
+            commands += 'and agree to credit it to this' + LF;
+            commands += 'card account' + LF + LF;
+            
+            // Footer
+            commands += ESC + 'a' + '\x01';  // Center align
+            commands += 'Thank you for using RELY!' + LF;
+            commands += new Date().toLocaleString() + LF;
+            commands += ESC + 'E' + '\x01';  // Bold on
+            commands += 'MERCHANT COPY' + LF;
+            commands += ESC + 'E' + '\x00';  // Bold off
+            
+            // Feed paper and cut
+            commands += LF + LF + LF;
+            commands += GS + 'V' + '\x42' + '\x00'; // Partial cut
+            
+            return commands;
         }
 
         // Update printer status display
