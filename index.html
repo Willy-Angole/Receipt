@@ -3,18 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RELY Receipt</title>
+    <title>RELY Receipt - Thermal Print Ready</title>
     <style>
-        /* Print-specific styles for thermal printers */
+        /* Thermal printer optimized styles */
         @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
             body {
-                margin: 0;
-                padding: 0;
-                font-family: 'Courier New', monospace;
-                font-size: 12px;
-                line-height: 1.2;
-                width: 58mm; /* Standard thermal printer width */
-                background: white;
+                margin: 0 !important;
+                padding: 0 !important;
+                font-family: 'Courier New', monospace !important;
+                font-size: 11px !important;
+                line-height: 1.1 !important;
+                width: 58mm !important;
+                background: white !important;
+                color: black !important;
             }
             
             .no-print {
@@ -22,14 +28,19 @@
             }
             
             .receipt {
-                width: 100%;
-                padding: 0;
-                margin: 0;
+                width: 100% !important;
+                padding: 2mm !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+            }
+            
+            .header, .order-info, .total-section {
+                break-inside: avoid !important;
             }
             
             @page {
-                margin: 0;
-                size: 58mm auto;
+                margin: 0 !important;
+                size: 58mm auto !important;
             }
         }
         
@@ -157,6 +168,13 @@
             font-weight: bold;
         }
         
+        .print-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
         .print-btn {
             background: #ff4500;
             color: white;
@@ -165,15 +183,22 @@
             font-size: 14px;
             border-radius: 5px;
             cursor: pointer;
-            margin: 20px auto;
-            display: block;
+            transition: background 0.3s;
         }
         
         .print-btn:hover {
             background: #e63e00;
         }
         
-        .auto-print-info {
+        .print-btn.secondary {
+            background: #666;
+        }
+        
+        .print-btn.secondary:hover {
+            background: #555;
+        }
+        
+        .printer-status {
             text-align: center;
             margin: 10px 0;
             padding: 10px;
@@ -188,11 +213,42 @@
             margin: 10px 0;
             font-size: 16px;
         }
+        
+        .raw-commands {
+            display: none;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 10px;
+            white-space: pre-wrap;
+            border: 1px solid #ddd;
+        }
+        
+        .info-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 12px;
+        }
+        
+        .info-section h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+        
+        .info-section ul {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="receipt">
+        <div class="receipt" id="receipt-content">
             <!-- Header -->
             <div class="header">
                 <div class="logo">RELY</div>
@@ -256,102 +312,279 @@
         </div>
         
         <div class="no-print">
-            <div class="auto-print-info">
-                ✅ Auto-print enabled for thermal printers
+            <div class="printer-status" id="printer-status">
+                🖨️ Ready to print to thermal printer
             </div>
-            <button class="print-btn" onclick="printReceiptAlt()">🖨️ Print Receipt</button>
+            
+            <div class="print-options">
+                <button class="print-btn" onclick="printDirect()">🖨️ Print Receipt (Direct)</button>
+                <button class="print-btn secondary" onclick="printESCPOS()">📄 Print with ESC/POS Commands</button>
+                <button class="print-btn secondary" onclick="showRawCommands()">📋 Show Raw Commands</button>
+                <button class="print-btn secondary" onclick="downloadReceipt()">💾 Download Receipt</button>
+            </div>
+            
+            <div class="info-section">
+                <h4>📝 Thermal Printer Setup:</h4>
+                <ul>
+                    <li><strong>USB/Serial:</strong> Install printer drivers and set as default printer</li>
+                    <li><strong>Network:</strong> Configure IP address in printer settings</li>
+                    <li><strong>Bluetooth:</strong> Pair device and install drivers</li>
+                    <li><strong>Paper:</strong> Use 58mm thermal paper rolls</li>
+                    <li><strong>ESC/POS:</strong> Most thermal printers support ESC/POS commands</li>
+                </ul>
+            </div>
+            
+            <div class="raw-commands" id="raw-commands">
+                <!-- ESC/POS commands will be generated here -->
+            </div>
         </div>
     </div>
 
     <script>
         // Set current timestamp
-        document.getElementById('timestamp').textContent = new Date().toLocaleString('en-KE', {
-            timeZone: 'Africa/Nairobi',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('timestamp').textContent = now.toLocaleString('en-KE', {
+                timeZone: 'Africa/Nairobi',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        
+        updateTimestamp();
 
-        // Alternative printing method for better compatibility
-        function printReceiptAlt() {
-            // Create a clean print version
-            const printContent = `
-                <html>
-                <head>
-                    <title>RELY Receipt</title>
+        // Direct print function optimized for thermal printers
+        function printDirect() {
+            try {
+                updatePrinterStatus('🖨️ Sending to printer...', 'info');
+                
+                // For better thermal printer compatibility
+                const printCSS = `
                     <style>
-                        body {
-                            font-family: 'Courier New', monospace;
-                            font-size: 12px;
-                            line-height: 1.2;
-                            margin: 0;
-                            padding: 10px;
-                            width: 300px;
+                        @media print {
+                            * { margin: 0 !important; padding: 0 !important; }
+                            body { 
+                                font-family: 'Courier New', monospace !important; 
+                                font-size: 10px !important; 
+                                line-height: 1.1 !important; 
+                                width: 58mm !important; 
+                            }
+                            @page { margin: 0 !important; size: 58mm auto !important; }
                         }
-                        .header { text-align: center; border-bottom: 1px dashed #333; padding-bottom: 10px; }
-                        .logo { font-size: 20px; font-weight: bold; }
-                        .total-price { font-weight: bold; font-size: 16px; }
-                        .status { background: #000; color: white; padding: 5px; text-align: center; }
-                        @media print { @page { margin: 0; size: auto; } }
                     </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <div class="logo">RELY</div>
-                        <div>info@rely.co.ke</div>
-                        <div>WhatsApp</div>
-                        <div>+254 700 55 00 55</div>
-                    </div>
-                    <br>
-                    <div>Lodwar - KES</div>
-                    <div><strong>Orders</strong></div>
-                    <br>
-                    <div><strong>Cradle Tented Camp, Lodwar</strong></div>
-                    <div>Order</div>
-                    <div>Regular x4 ✓ - KES1,000.00</div>
-                    <div>================================</div>
-                    <div>Sub-total: KES3,560.00</div>
-                    <div>Taxes: KES440.00</div>
-                    <div class="total-price">Total Price: KSh4,000.00</div>
-                    <div class="status">✓ Paid</div>
-                    <div>================================</div>
-                    <div style="text-align: center;">Thank you for using RELY!</div>
-                    <div style="text-align: center;">${new Date().toLocaleString()}</div>
-                </body>
-                </html>
-            `;
-            
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(printContent);
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
+                `;
+                
+                // Add print-specific styles temporarily
+                const styleElement = document.createElement('style');
+                styleElement.innerHTML = printCSS;
+                document.head.appendChild(styleElement);
+                
+                // Trigger print
+                window.print();
+                
+                // Remove temporary styles after printing
+                setTimeout(() => {
+                    document.head.removeChild(styleElement);
+                    updatePrinterStatus('✅ Print command sent', 'success');
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Print error:', error);
+                updatePrinterStatus('❌ Print failed: ' + error.message, 'error');
+            }
         }
 
-        // Auto-print when page loads (for direct thermal printer access)
+        // ESC/POS thermal printer function
+        function printESCPOS() {
+            const commands = generateESCPOSCommands();
+            
+            // Try to send raw commands to printer (requires special setup)
+            if (navigator.serial) {
+                printViaSerial(commands);
+            } else {
+                // Fallback: copy commands to clipboard
+                navigator.clipboard.writeText(commands).then(() => {
+                    updatePrinterStatus('📋 ESC/POS commands copied to clipboard', 'info');
+                    alert('ESC/POS commands copied to clipboard. Use a thermal printer utility to send them.');
+                }).catch(() => {
+                    showRawCommands();
+                });
+            }
+        }
+
+        // Generate ESC/POS commands for thermal printer
+        function generateESCPOSCommands() {
+            const ESC = '\x1B';
+            const GS = '\x1D';
+            
+            let commands = '';
+            commands += ESC + '@'; // Initialize printer
+            commands += ESC + 'a' + '\x01'; // Center align
+            commands += GS + '!' + '\x11'; // Double height and width
+            commands += 'RELY\n';
+            commands += GS + '!' + '\x00'; // Normal size
+            commands += 'info@rely.co.ke\n';
+            commands += 'WhatsApp\n';
+            commands += '+254 700 55 00 55\n';
+            commands += '================================\n';
+            commands += ESC + 'a' + '\x00'; // Left align
+            commands += 'Lodwar - KES\n';
+            commands += 'Orders\n\n';
+            commands += 'Cradle Tented Camp, Lodwar\n';
+            commands += 'Order\n';
+            commands += 'Regular x4     KES1,000.00\n';
+            commands += '================================\n';
+            commands += 'Sub-total:     KES3,560.00\n';
+            commands += 'Taxes:           KES440.00\n';
+            commands += '================================\n';
+            commands += ESC + 'E' + '\x01'; // Bold on
+            commands += 'Total Price:   KSh4,000.00\n';
+            commands += ESC + 'E' + '\x00'; // Bold off
+            commands += '================================\n';
+            commands += ESC + 'a' + '\x01'; // Center align
+            commands += 'PAID\n';
+            commands += '================================\n';
+            commands += 'Thank you for using RELY!\n';
+            commands += new Date().toLocaleString() + '\n';
+            commands += '\n\n\n'; // Paper feed
+            commands += GS + 'V' + '\x42' + '\x00'; // Partial cut
+            
+            return commands;
+        }
+
+        // Serial API for direct printer communication (Chrome 89+)
+        async function printViaSerial(commands) {
+            try {
+                updatePrinterStatus('🔌 Connecting to serial printer...', 'info');
+                
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+                
+                const writer = port.writable.getWriter();
+                const encoder = new TextEncoder();
+                await writer.write(encoder.encode(commands));
+                
+                writer.releaseLock();
+                await port.close();
+                
+                updatePrinterStatus('✅ Printed successfully via serial', 'success');
+                
+            } catch (error) {
+                console.error('Serial print error:', error);
+                updatePrinterStatus('❌ Serial print failed: ' + error.message, 'error');
+            }
+        }
+
+        // Show raw ESC/POS commands
+        function showRawCommands() {
+            const commands = generateESCPOSCommands();
+            const rawDiv = document.getElementById('raw-commands');
+            
+            // Convert control characters to visible format
+            const visibleCommands = commands
+                .replace(/\x1B/g, 'ESC')
+                .replace(/\x1D/g, 'GS')
+                .replace(/\x00/g, '[NULL]')
+                .replace(/\x01/g, '[SOH]')
+                .replace(/\x11/g, '[DC1]')
+                .replace(/\x42/g, '[B]');
+            
+            rawDiv.textContent = visibleCommands;
+            rawDiv.style.display = rawDiv.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Download receipt as text file
+        function downloadReceipt() {
+            const receiptText = `
+RELY
+info@rely.co.ke
+WhatsApp
++254 700 55 00 55
+
+================================
+Lodwar - KES
+Orders
+
+Cradle Tented Camp, Lodwar
+Order
+Regular x4               KES1,000.00
+================================
+Sub-total:               KES3,560.00
+Taxes:                     KES440.00
+================================
+Total Price:             KSh4,000.00
+================================
+PAID
+================================
+Thank you for using RELY!
+${new Date().toLocaleString()}
+            `;
+            
+            const blob = new Blob([receiptText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'RELY_Receipt_' + Date.now() + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            updatePrinterStatus('💾 Receipt downloaded', 'success');
+        }
+
+        // Update printer status display
+        function updatePrinterStatus(message, type) {
+            const statusDiv = document.getElementById('printer-status');
+            statusDiv.textContent = message;
+            
+            // Update styling based on type
+            statusDiv.className = 'printer-status';
+            if (type === 'error') {
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.borderColor = '#f5c6cb';
+                statusDiv.style.color = '#721c24';
+            } else if (type === 'success') {
+                statusDiv.style.background = '#d4edda';
+                statusDiv.style.borderColor = '#c3e6cb';
+                statusDiv.style.color = '#155724';
+            } else {
+                statusDiv.style.background = '#cce7ff';
+                statusDiv.style.borderColor = '#99d3ff';
+                statusDiv.style.color = '#004085';
+            }
+            
+            // Reset to default after 3 seconds
+            setTimeout(() => {
+                statusDiv.textContent = '🖨️ Ready to print to thermal printer';
+                statusDiv.className = 'printer-status';
+                statusDiv.style.background = '#e8f5e8';
+                statusDiv.style.borderColor = '#4CAF50';
+                statusDiv.style.color = 'inherit';
+            }, 3000);
+        }
+
+        // Auto-print functionality
         window.addEventListener('load', function() {
-            // Check if this is a direct print request (you can add URL parameters)
             const urlParams = new URLSearchParams(window.location.search);
             const autoPrint = urlParams.get('autoprint');
             
             if (autoPrint === 'true') {
-                setTimeout(printReceipt, 1000); // Delay to ensure page is fully loaded
+                setTimeout(printDirect, 1000);
             }
         });
 
-        // Simple print function optimized for thermal printers
-        function printReceipt() {
-            try {
-                // Use the browser's built-in print function
-                window.print();
-            } catch (error) {
-                console.error('Print error:', error);
-                alert('Print failed. Please try manually printing the page.');
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                printDirect();
             }
-        }
+        });
     </script>
 </body>
 </html>
